@@ -30,6 +30,7 @@ SELECT *
 FROM #ClearNull
 
 /* WHERE THE "make" is not Null*/
+
 CREATE TABLE NewCarPrices (
 year float,
 make nvarchar(255),
@@ -52,7 +53,7 @@ saledate nvarchar(255),
 INSERT INTO NewCarPrices
 SELECT *
 FROM car_prices
-WHERE make is NOT NULL AND saledate is NOT NULL
+WHERE make is NOT NULL AND saledate is NOT NULL AND odometer is NOT NULL
 
 SELECT *
 FROM NewCarPrices
@@ -153,56 +154,6 @@ SET saledate = CAST(SUBSTRING(saledate, CHARINDEX(' ', saledate) + 1, LEN(saleda
 UPDATE NewCarPrices
 SET saledate = CONVERT(date,saledate)
 
-SELECT *
-FROM NewCarPrices
-
-SELECT year, make, model, trim, condition, odometer, saledate,
-    CASE 
-        WHEN DATEDIFF(YEAR, CAST(saledate AS DATE), year) < 2 AND odometer < 20000 AND condition > 40 THEN 'Excellent'
-        WHEN DATEDIFF(YEAR, CAST(saledate AS DATE), year) < 4 AND odometer > 20000 AND condition > 30 THEN 'Great'
-        WHEN condition > 20 AND odometer > 20000 THEN 'Good'
-        WHEN condition < 5 AND odometer > 100000 THEN 'Bad'
-        ELSE 'Unknown'
-    END AS 'Condition'
-FROM NewCarPrices
-ORDER BY make
-
-SELECT year, make, model, trim, condition, odometer, saledate,
-	CASE
-		WHEN (sellingprice - mmr) < 0 THEN 'LOSS'
-		ELSE 'PROFIT'
-	END AS 'Profit or LOSS'
-FROM NewCarPrices
-ORDER BY make
-
-ALTER TABLE NewCarPrices
-ADD Car_Condition_Category NVARCHAR(255),
-Profit_or_Loss NVARCHAR(255),
-Country NVARCHAR(255)
-
-UPDATE NewCarPrices
-SET Car_Condition_Category = 
-    CASE 
-        WHEN DATEDIFF(YEAR, CAST(saledate AS DATE), year) < 2 AND odometer < 20000 AND condition > 40 THEN 'Excellent'
-        WHEN DATEDIFF(YEAR, CAST(saledate AS DATE), year) < 4 AND odometer < 30000 AND condition > 20 THEN 'Great'
-        WHEN condition >= 20 AND odometer >= 30000 THEN 'Good'
-		WHEN condition < 20 AND odometer >= 30000 THEN 'Bad'
-        WHEN condition < 5 AND odometer > 100000 THEN 'Very Bad'
-        ELSE 'Unknown'
-    END 
-
-UPDATE NewCarPrices
-SET Profit_or_Loss = 
-    CASE
-		WHEN (sellingprice - mmr) < 0 THEN 'LOSS'
-		ELSE 'PROFIT'
-	END
-
-SELECT *
-FROM NewCarPrices
-WHERE Car_Condition_Category = 'Unknown'
-ORDER BY condition DESC
-
 ALTER TABLE NewCarPrices
 ADD Country NVARCHAR(255)
 
@@ -213,14 +164,142 @@ SET Country =
         ELSE 'United States'
     END
 
-SELECT state, Country
+CREATE TABLE CategorizedCar(
+Year int,
+Make NVARCHAR(255),
+Body NVARCHAR (255),
+Vin NVARCHAR(255),
+State NVARCHAR(255),
+Condition INT,
+Odometer INT,
+Color NVARCHAR(255),
+MMR INT,
+SellingPrice INT,
+Seller NVARCHAR(255),
+Saledate DATE,
+Country NVARCHAR(255)
+)
+
+INSERT INTO CategorizedCar
+SELECT year, make, body, vin, state, condition, odometer, color, mmr, sellingprice, saledate, Country
 FROM NewCarPrices
-WHERE state IN ('ab', 'on', 'qc', 'ns')
 
 
+SELECT make,
+    CASE 
+        WHEN make IN ('Dodge', 'Cadillac', 'Honda', 'Jeep', 'Subaru', 'Plymouth', 'Pontiac', 'HUMMER', 'Scion', 'Infiniti', 'Dodge', 'GMC', 'Volkswagen', 'Acura', 'Isuzu', 'Oldsmobile', 'Ford', 'Geo', 'Chevrolet', 'Buick', 'Saturn', 'Toyota', 'Mazda', 'Jaguar', 'Mercury', 'Chrysler', 'Daewoo', 'Lincoln', 'Ford', 'Ram', 'Audi') THEN 'American'
+        WHEN make IN ('Maserati', 'Land Rover', 'Fisker', 'Volvo', 'Aston Martin', 'Mitsubishi', 'BMW', 'Mercedes', 'Porsche', 'Lotus', 'smart', 'Lamborghini', 'MINI', 'Rolls-Royce', 'Bentley', 'Lexus', 'Hyundai', 'Airstream', 'Mercedes-Benz', 'FIAT', 'VW', 'Mazda', 'Mercedes-Benz') THEN 'European'
+        WHEN make IN ('Honda', 'Toyota', 'Nissan', 'Subaru', 'Mazda', 'Hyundai', 'Kia', 'Mitsubishi', 'Lexus', 'Acura', 'Infiniti', 'Isuzu', 'Suzuki', 'Daewoo') THEN 'Asian'
+        ELSE 'Luxury'
+    END AS category
+FROM CategorizedCar;
+
+ALTER TABLE CategorizedCar
+ADD Category nvarchar(255)
+
+UPDATE a
+SET Category = CASE 
+        WHEN make IN ('Dodge', 'Cadillac', 'Honda', 'Jeep', 'Subaru', 'Plymouth', 'Pontiac', 'HUMMER', 'Scion', 'Infiniti', 'Dodge', 'GMC', 'Volkswagen', 'Acura', 'Isuzu', 'Oldsmobile', 'Ford', 'Geo', 'Chevrolet', 'Buick', 'Saturn', 'Toyota', 'Mazda', 'Jaguar', 'Mercury', 'Chrysler', 'Daewoo', 'Lincoln', 'Ford', 'Ram', 'Audi') THEN 'American'
+        WHEN make IN ('Maserati', 'Land Rover', 'Fisker', 'Volvo', 'Aston Martin', 'Mitsubishi', 'BMW', 'Mercedes', 'Porsche', 'Lotus', 'smart', 'Lamborghini', 'MINI', 'Rolls-Royce', 'Bentley', 'Lexus', 'Hyundai', 'Airstream', 'Mercedes-Benz', 'FIAT', 'VW', 'Mazda', 'Mercedes-Benz') THEN 'European'
+        WHEN make IN ('Honda', 'Toyota', 'Nissan', 'Subaru', 'Mazda', 'Hyundai', 'Kia', 'Mitsubishi', 'Lexus', 'Acura', 'Infiniti', 'Isuzu', 'Suzuki', 'Daewoo') THEN 'Asian'
+        ELSE 'Luxury'
+    END
+FROM CategorizedCar AS a 
+
+/*Excellent (1-15), Good (16-30), Fair (31-45), Poor (46-49))*/
+
+SELECT year, make, odometer, condition,
+    CASE 
+        WHEN condition BETWEEN 1 AND 15 THEN 'Poor'
+		WHEN condition BETWEEN 16 AND 24 THEN 'Fair'
+		WHEN condition BETWEEN 25 AND 39 THEN 'Good'
+		WHEN condition BETWEEN 40 AND 49 THEN 'Excellent'
+		ELSE 'Uknown'
+    END AS 'Condition Categorized'
+FROM CategorizedCar
+WHERE condition BETWEEN 25 AND 39
+
+ALTER TABLE CategorizedCar
+ADD Condition_Categorized NVARCHAR(255)
+
+UPDATE a
+SET a.Condition_Categorized = 
+  CASE WHEN a.condition BETWEEN 1 AND 15 THEN 'Poor'
+       WHEN a.condition BETWEEN 16 AND 24 THEN 'Fair'
+       WHEN a.condition BETWEEN 25 AND 39 THEN 'Good'
+       WHEN a.condition BETWEEN 40 AND 49 THEN 'Excellent'
+       ELSE 'Unknown' 
+  END
+FROM CategorizedCar AS a;
+
+SELECT Condition_Categorized
+FROM NewCarPrices
+WHERE condition is NULL
+
+ALTER TABLE CategorizedCar
+ADD Basic_Colors NVARCHAR(255)
+
+SELECT color, 
+		CASE
+		WHEN color IN ('black', 'charcoal') THEN 'Black'
+        WHEN color IN ('blue', 'turquoise') THEN 'Blue'
+        WHEN color IN ('green', 'lime') THEN 'Green'
+        WHEN color IN ('yellow', 'gold') THEN 'Yellow'
+        WHEN color IN ('red', 'burgundy') THEN 'Red'
+        WHEN color IN ('silver', 'gray') THEN 'Gray'
+        WHEN color IN ('white', 'off-white') THEN 'White'
+		WHEN color IN ('orange') THEN 'Orange'
+        WHEN color IN ('brown') THEN 'Brown'
+        WHEN color IN ('purple') THEN 'Purple'
+        WHEN color IN ('pink') THEN 'Pink'
+		ELSE 'Uknown'
+	END AS BC
+FROM CategorizedCar
+
+UPDATE a
+SET Basic_Colors =
+		CASE
+		WHEN color IN ('black', 'charcoal') THEN 'Black'
+        WHEN color IN ('blue', 'turquoise') THEN 'Blue'
+        WHEN color IN ('green', 'lime') THEN 'Green'
+        WHEN color IN ('yellow', 'gold') THEN 'Yellow'
+        WHEN color IN ('red', 'burgundy') THEN 'Red'
+        WHEN color IN ('silver', 'gray') THEN 'Gray'
+        WHEN color IN ('white', 'off-white') THEN 'White'
+		WHEN color IN ('orange') THEN 'Orange'
+        WHEN color IN ('brown') THEN 'Brown'
+        WHEN color IN ('purple') THEN 'Purple'
+        WHEN color IN ('pink') THEN 'Pink'
+		ELSE 'Uknown'
+	END 
+FROM CategorizedCar AS a 
+
+ALTER TABLE CategorizedCar
+ADD Body_Type NVARCHAR(255)
+
+UPDATE a
+SET Body_Type = 
+		CASE 
+        WHEN body IN ('E-Series Van', 'Ram Van', 'Transit Van', 'Promaster Cargo Van', 'Van') THEN 'Van'
+        WHEN body IN ('Minivan', 'Club Cab', 'Crew Cab', 'SuperCab', 'Regular Cab', 'Cab Plus', 'CrewMax Cab', 'King Cab', 'Access Cab', 'Quad Cab', 'Mega Cab', 'Double Cab', 'Xtracab', 'Cab Plus 4', 'SuperCrew', 'regular-cab', 'extended cab') THEN 'Truck'
+        WHEN body IN ('SUV') THEN 'SUV'
+        WHEN body IN ('Convertible', 'Beetle Convertible', 'GranTurismo Convertible') THEN 'Convertible'
+        WHEN body IN ('Coupe', 'CTS Coupe', 'Q60 Coupe', 'Genesis Coupe', 'CTS-V Coupe', 'Koup', 'G37 Coupe', 'G Coupe', 'Elantra Coupe', 'G Convertible', 'Q60 Convertible', 'G37 Convertible') THEN 'Coupe'
+        WHEN body IN ('CTS-V Wagon', 'Wagon', 'CTS Wagon', 'TSX Sport Wagon') THEN 'Wagon'
+		WHEN body IN ('Sedan', 'G Sedan') THEN 'Sedan'
+        WHEN body IN ('Hatchback') THEN 'Hatchback'
+        ELSE 'Uknown'
+		END
+FROM CategorizedCar AS a
+
+ALTER TABLE CategorizedCar
+ADD Seller NVARCHAR(255)
+
+UPDATE a
+SET Seller = b.seller
+FROM CategorizedCar AS a 
+JOIN NewCarPrices AS b
+ON a.vin = b.vin
 
 
-
-
- 
 
